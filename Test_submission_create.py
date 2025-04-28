@@ -1,25 +1,18 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
 
-# Load test data
+lookup_table = pd.read_csv('IdLookupTable.csv')
+model = load_model('Model File')
+
 test_data = pd.read_csv('test.csv')
 X_test = np.array([np.fromstring(img, sep=' ') for img in test_data['Image']])
 X_test = X_test / 255.0
 X_test = X_test.reshape(-1, 96, 96, 1)
 
-# Load IdLookupTable
-lookup_table = pd.read_csv('IdLookupTable.csv')
-
-# Load model
-model = load_model('facial_keypoints_model.h5')
-
-# Predict
 predictions = model.predict(X_test)
 predictions = predictions * 96
 
-# Define keypoint columns (this must match your training labels)
 keypoint_columns = [
     'left_eye_center_x', 'left_eye_center_y',
     'right_eye_center_x', 'right_eye_center_y',
@@ -38,10 +31,8 @@ keypoint_columns = [
     'mouth_center_bottom_lip_x', 'mouth_center_bottom_lip_y'
 ]
 
-# Make a DataFrame with predictions
 preds_df = pd.DataFrame(predictions, columns=keypoint_columns)
 
-# Prepare final submission
 locations = []
 for idx, row in lookup_table.iterrows():
     image_id = row['ImageId'] - 1
