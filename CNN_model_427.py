@@ -6,6 +6,10 @@ from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dens
 from tensorflow.keras.optimizers import Adam
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.layers import LeakyReLU
+from tensorflow.keras.losses import Huber
+from tensorflow.keras.callbacks import EarlyStopping
+
+model_save_name = 'facial_keypoints_model_428_3.h5'
 
 # Load the data & IdLookupTable
 data = pd.read_csv('training.csv')
@@ -33,24 +37,16 @@ X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1, random_st
 # Build the CNN model
 model = Sequential([
     Conv2D(32, (3,3)),
-    BatchNormalization(),
-    LeakyReLU(alpha=0.01),
-    MaxPooling2D(2,2),
-    Dropout(0.0),
-
-    Conv2D(64, (3,3)),
-    BatchNormalization(),
     LeakyReLU(alpha=0.01),
     MaxPooling2D(2,2),
     Dropout(0.05),
 
-    Conv2D(128, (3,3)),
-    BatchNormalization(),
+    Conv2D(64, (3,3)),
     LeakyReLU(alpha=0.01),
     MaxPooling2D(2,2),
-    Dropout(0.1),
+    Dropout(0.01),
 
-    Conv2D(256, (3,3)),
+    Conv2D(128, (3,3)),
     LeakyReLU(alpha=0.01),
     MaxPooling2D(2,2),
     Dropout(0.15),
@@ -62,46 +58,39 @@ model = Sequential([
     Dense(500),
     LeakyReLU(alpha=0.01),
     Dropout(0.5),
-    Dense(30) # 15 keypoints * (x,y)
+    Dense(30)  # 15 keypoints * (x,y)
 ])
 
 # Compile the model
 model.compile(optimizer=Adam(learning_rate=0.0005),
-              loss='mean_squared_error',
+              loss=Huber(delta=1.0),
               metrics=['mae'])
+
+
+early_stopping = EarlyStopping(
+    monitor='val_loss',
+    patience=20,
+    restore_best_weights=True
+)
 
 # Train the model
 history = model.fit(
     X_train, y_train,
     validation_data=(X_val, y_val),
-    epochs=100,
+    epochs=300,
+    verbose=1,
     batch_size=64,
-    verbose=1
+    callbacks=[early_stopping]
 )
-
-# Compile the model
-model.compile(optimizer=Adam(learning_rate=0.0005),
-              loss='mean_squared_error',
-              metrics=['mae'])
-
-# Train the model
-history = model.fit(
-    X_train, y_train,
-    validation_data=(X_val, y_val),
-    epochs=100,
-    batch_size=64,
-    verbose=1
-)
-
 # Save model
-model.save('facial_keypoints_model_427_1.h5')
+model.save(model_save_name)
 
+#-----------------------------------------------------------------------------
 # Load test data
 test_data = pd.read_csv('test.csv')
 X_test = np.array([np.fromstring(img, sep=' ') for img in test_data['Image']])
 X_test = X_test / 255.0
 X_test = X_test.reshape(-1, 96, 96, 1)
-
 # Predict
 predictions = model.predict(X_test)
 predictions = predictions * 96
