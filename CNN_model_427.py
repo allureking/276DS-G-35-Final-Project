@@ -33,16 +33,19 @@ X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1, random_st
 # Build the CNN model
 model = Sequential([
     Conv2D(32, (3,3)),
+    BatchNormalization(),
     LeakyReLU(alpha=0.01),
     MaxPooling2D(2,2),
     Dropout(0.0),
 
     Conv2D(64, (3,3)),
+    BatchNormalization(),
     LeakyReLU(alpha=0.01),
     MaxPooling2D(2,2),
     Dropout(0.05),
 
     Conv2D(128, (3,3)),
+    BatchNormalization(),
     LeakyReLU(alpha=0.01),
     MaxPooling2D(2,2),
     Dropout(0.1),
