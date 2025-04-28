@@ -47,6 +47,11 @@ model = Sequential([
     MaxPooling2D(2,2),
     Dropout(0.1),
 
+    Conv2D(256, (3,3)),
+    LeakyReLU(alpha=0.01),
+    MaxPooling2D(2,2),
+    Dropout(0.15),
+
     Flatten(),
     Dense(500),
     LeakyReLU(alpha=0.01),
