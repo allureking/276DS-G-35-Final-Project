@@ -3,13 +3,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense
-from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.optimizers import Adam, SGD
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.layers import LeakyReLU
 from tensorflow.keras.losses import Huber
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
-model_save_name = 'facial_keypoints_model_428_3.h5'
+model_save_name = 'facial_keypoints_adam_428_4.h5'
+final_model_save_name= 'facial_keypoints_sgd_428_4.h5'
 
 # Load the data & IdLookupTable
 data = pd.read_csv('training.csv')
@@ -77,13 +78,45 @@ early_stopping = EarlyStopping(
 history = model.fit(
     X_train, y_train,
     validation_data=(X_val, y_val),
-    epochs=300,
+    epochs=250,
     verbose=1,
     batch_size=64,
     callbacks=[early_stopping]
 )
 # Save model
 model.save(model_save_name)
+
+#--------------------------------------------------------------------------------------
+# Compile the model with SGD
+model.compile(optimizer=SGD(learning_rate=0.001, momentum=0.9),
+              loss=Huber(delta=1.0),
+              metrics=['mae'])
+
+early_stopping_sgd = EarlyStopping(
+    monitor='val_loss',
+    patience=20,
+    restore_best_weights=True
+)
+
+reduce_lr = ReduceLROnPlateau(
+    monitor='val_loss',
+    factor=0.5,
+    patience=10,
+    verbose=1,
+    min_lr=1e-6
+)
+
+# Fine-tune with SGD
+history_sgd = model.fit(
+    X_train, y_train,
+    validation_data=(X_val, y_val),
+    epochs=150,
+    verbose=1,
+    batch_size=64,
+    callbacks=[early_stopping_sgd, reduce_lr]
+)
+
+model.save(final_model_save_name)
 
 #-----------------------------------------------------------------------------
 # Load test data
